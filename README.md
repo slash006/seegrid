@@ -7,4 +7,6 @@
 ### Streamed video area
 
 ## Building standalone app
+`docker build .`
+
 `docker run --rm -v "$(pwd):/app" builder-rtsp`
