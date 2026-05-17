@@ -5,3 +5,6 @@
 ### Number of columns and rows
 ### Resource links
 ### Streamed video area
+
+## Building standalone app
+`docker run --rm -v "$(pwd):/app" builder-rtsp`
