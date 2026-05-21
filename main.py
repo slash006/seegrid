@@ -7,11 +7,9 @@ import time
 
 os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp|probesize;32|analyzeduration;0|fflags;nobuffer"
 
-class VideoStream:
-    def __init__(self, url, name, crop_mode="none"):
+class VideoFetcher:
+    def __init__(self, url):
         self.url = url
-        self.name = name
-        self.crop_mode = crop_mode # "top_half", "bottom_half", "left_half", "right_half" or "none"
         self.stream = None
         self.frame = None
         self.stopped = False
@@ -40,20 +38,27 @@ class VideoStream:
                 if self.stream: self.stream.release()
                 time.sleep(1)
 
+class VideoView:
+    def __init__(self, fetcher, name, crop_mode="none"):
+        self.fetcher = fetcher
+        self.name = name
+        self.crop_mode = crop_mode # "top_half", "bottom_half", "left_half", "right_half" or "none"
+
+
     def get_frame(self, target_size):
-        if self.frame is not None:
-            h, w = self.frame.shape[:2]
-            
+        if self.fetcher.frame is not None:
+            h, w = self.fetcher.frame.shape[:2]
+
             if self.crop_mode == "top_half":
-                temp_frame = self.frame[0:h//2, 0:w]
+                temp_frame = self.fetcher.frame[0:h//2, 0:w]
             elif self.crop_mode == "bottom_half":
-                temp_frame = self.frame[h//2:h, 0:w]
+                temp_frame = self.fetcher.frame[h//2:h, 0:w]
             elif self.crop_mode == "left_half":
-                temp_frame = self.frame[0:h, 0:w//2]
+                temp_frame = self.fetcher.frame[0:h, 0:w//2]
             elif self.crop_mode == "right_half":
-                temp_frame = self.frame[0:h, w//2:w]
+                temp_frame = self.fetcher.frame[0:h, w//2:w]
             else:
-                temp_frame = self.frame
+                temp_frame = self.fetcher.frame
 
             return cv2.resize(temp_frame, target_size)
         
@@ -66,14 +71,20 @@ def main():
     with open('config.json') as f:
         config = json.load(f)
 
-    streams = []
+    fetchers = {}
+    views = []
+
     for s_config in config['streams']:
-        s = VideoStream(
-            url=s_config['url'], 
+        url = s_config['url']
+        if url not in fetchers:
+            fetchers[url] = VideoFetcher(url).start()
+
+        view = VideoView(
+            fetcher=fetchers[url],
             name=s_config.get('name', 'Cam'),
             crop_mode=s_config.get('crop', 'none')
-        ).start()
-        streams.append(s)
+        )
+        views.append(view)
 
     grid_w = config.get('grid_width', 2)
     is_fullscreen = config.get('fullscreen', False)
@@ -102,8 +113,8 @@ def main():
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
-    for s in streams:
-        s.stopped = True
+    for f in fetchers.values():
+        f.stopped = True
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
