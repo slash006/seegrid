@@ -7,6 +7,6 @@
 ### Streamed video area
 
 ## Building standalone app
-`docker build .`
+`docker build -t seegrid-builder .`
 
-`docker run --rm -v "$(pwd):/app" builder-rtsp`
+`docker run --rm -v "$(pwd):/app" seegrid-builder`
